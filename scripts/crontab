@@ -1,0 +1,2 @@
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/5 * * * * cd /var/www/metal && php artisan schedule:run >> /var/log/cron.log 2>&1

@@ -37,31 +37,30 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $credentials = request(['email', 'password']);
+        $user = User::where('email', $request->email)->first();
+        if ($user) {
+            if (Hash::check($request->password, $user->password)) {
+                $tokenResult = $user->createToken('Personal Access Token');
+                $token = $tokenResult->token;
+                if ($request->remember_me) {
+                    $token->expires_at = Carbon::now()->addWeeks(1);
+                }
 
-        if (!Auth::attempt($credentials)) {
+                $token->save();
+
+                $data = [
+                    'data' => $user->toArray(),
+                    'role' => $user->roles,
+                    'access_token' => $tokenResult->accessToken,
+                    'token_type' => 'Bearer',
+                    'expires_at' => Carbon::parse($tokenResult->token->expires_at)->toDateTimeString()
+                ];
+
+                return $this->sendResponse($data, "Login Successfully", Response::HTTP_OK);
+            }
+        } else {
             return $this->sendError("Login Failed", [], Response::HTTP_UNAUTHORIZED);
         }
-
-        $user = $request->user();
-        $tokenResult = $user->createToken('Personal Access Token');
-        $token = $tokenResult->token;
-
-        if ($request->remember_me) {
-            $token->expires_at = Carbon::now()->addWeeks(1);
-        }
-
-        $token->save();
-
-        $data = [
-            'data' => $user->toArray(),
-            'role' => $user->roles,
-            'access_token' => $tokenResult->accessToken,
-            'token_type' => 'Bearer',
-            'expires_at' => Carbon::parse($tokenResult->token->expires_at)->toDateTimeString()
-        ];
-
-        return $this->sendResponse($data, "Login Successfully", Response::HTTP_OK);
     }
 
     public function logout(Request $request)
@@ -90,5 +89,4 @@ class AuthController extends Controller
 
         return $this->sendResponse($data, ResponseMessages::RESPONSE_API_INDEX, Response::HTTP_OK);
     }
-
 }

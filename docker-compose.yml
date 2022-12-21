@@ -1,0 +1,87 @@
+version: "3"
+services:
+    #PHP Service
+    app:
+        build:
+            context: .
+            target: dev
+            dockerfile: Dockerfile
+        image: digitalocean.com/php
+        container_name: blog-api
+        restart: unless-stopped
+        tty: true
+        environment:
+            SERVICE_NAME: app
+            SERVICE_TAGS: dev
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+            - ./scripts/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+        networks:
+            - blog-api-network
+
+    #Nginx Service
+    webserver:
+        image: nginx:alpine
+        container_name: blog-api-webserver
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./:/var/www
+            - ./scripts/nginx/:/etc/nginx/conf.d/
+        networks:
+            - blog-api-network
+
+    #MySQL Service
+    db:
+        #image: mysql:5.6
+        image: mariadb:10.2
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_DATABASE: blog-api
+            MYSQL_ROOT_PASSWORD: root
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            - dbdata:/var/lib/mysql
+            - ./scripts/mysql/my.cnf:/etc/mysql/my.cnf
+        networks:
+            - blog-api-network
+
+    #PhpMyadmin
+    #phpmyadmin:
+    #  image: phpmyadmin/phpmyadmin
+    #  restart: always
+    #  ports:
+    #    - 8088:80
+    #  environment:
+    #    PMA_HOST: db
+    #    MYSQL_ROOT_PASSWORD: root
+    #  networks:
+    #    - blog-api-network
+
+    # Adminer Service
+    adminer:
+        image: adminer
+        container_name: blog-api-adminer
+        restart: always
+        ports:
+            - 8080:8080
+        networks:
+            - blog-api-network
+
+#Docker Networks
+networks:
+    blog-api-network:
+        driver: bridge
+
+#Volumes
+volumes:
+    dbdata:
+        driver: local
